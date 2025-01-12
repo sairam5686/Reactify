@@ -15,21 +15,18 @@ export function Home() {
     }
   };
 
-
-
-
   return (
-    <div className="min-h-screen bg-black flex text-b items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Wand2 className="w-12 h-12 text-blue-400" />
           </div>
           <h1 className="text-4xl font-bold text-gray-100 mb-4">
-            Reactify AI
+            Website Builder AI
           </h1>
           <p className="text-lg text-gray-300">
-            Describe your dream website, and we'll create it with the help of our AI
+            Describe your dream website, and we'll help you build it step by step
           </p>
         </div>
 

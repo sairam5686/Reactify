@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { StepsList } from '../components/StepsList';
 import { FileExplorer } from '../components/FileExplorer';
@@ -10,6 +10,7 @@ import axios from 'axios';
 import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
+import { FileNode } from '@webcontainer/api';
 import { Loader } from '../components/Loader';
 
 const MOCK_FILE_CONTENT = `// This is a sample file content
@@ -35,6 +36,7 @@ export function Builder() {
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   
   const [steps, setSteps] = useState<Step[]>([]);
+
   const [files, setFiles] = useState<FileItem[]>([]);
 
   useEffect(() => {
@@ -84,16 +86,19 @@ export function Builder() {
         }
         originalFiles = finalAnswerRef;
       }
-    });
+
+    })
 
     if (updateHappened) {
-      setFiles(originalFiles);
+
+      setFiles(originalFiles)
       setSteps(steps => steps.map((s: Step) => {
         return {
           ...s,
           status: "completed"
         }
-      }));
+        
+      }))
     }
     console.log(files);
   }, [steps, files]);
@@ -146,52 +151,47 @@ export function Builder() {
   }, [files, webcontainer]);
 
   async function init() {
-    try {
-      const response = await axios.post(`${BACKEND_URL}/template`, {
-        prompt: prompt.trim()
-      });
-      setTemplateSet(true);
-      
-      const {prompts, uiPrompts} = response.data;
+    const response = await axios.post(`${BACKEND_URL}/template`, {
+      prompt: prompt.trim()
+    });
+    setTemplateSet(true);
+    
+    const {prompts, uiPrompts} = response.data;
 
-      setSteps(parseXml(uiPrompts[0]).map((x: Step) => ({
-        ...x,
-        status: "pending"
-      })));
+    setSteps(parseXml(uiPrompts[0]).map((x: Step) => ({
+      ...x,
+      status: "pending"
+    })));
 
-      setLoading(true);
-      const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
-        messages: [...prompts, prompt].map(content => ({
-          role: "user",
-          content
-        }))
-      });
-
-      setLoading(false);
-
-      setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
-        ...x,
-        status: "pending" as "pending"
-      }))]);
-
-      setLlmMessages([...prompts, prompt].map(content => ({
+    setLoading(true);
+    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+      messages: [...prompts, prompt].map(content => ({
         role: "user",
         content
-      })));
+      }))
+    })
 
-      setLlmMessages(x => [...x, {role: "assistant", content: stepsResponse.data.response}]);
-    } catch (error) {
-      console.error("Error during API calls:", error);
-      setLoading(false);
-    }
+    setLoading(false);
+
+    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
+      ...x,
+      status: "pending" as "pending"
+    }))]);
+
+    setLlmMessages([...prompts, prompt].map(content => ({
+      role: "user",
+      content
+    })));
+
+    setLlmMessages(x => [...x, {role: "assistant", content: stepsResponse.data.response}])
   }
 
   useEffect(() => {
     init();
-  }, []);
+  }, [])
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen bg-gray-900 flex flex-col">
       <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <h1 className="text-xl font-semibold text-gray-100">Website Builder</h1>
         <p className="text-sm text-gray-400 mt-1">Prompt: {prompt}</p>
@@ -201,7 +201,7 @@ export function Builder() {
         <div className="h-full grid grid-cols-4 gap-6 p-6">
           <div className="col-span-1 space-y-6 overflow-auto">
             <div>
-              <div className="max-h-[75vh]  scroll-smooth overflow-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+              <div className="max-h-[75vh] overflow-scroll">
                 <StepsList
                   steps={steps}
                   currentStep={currentStep}
@@ -209,48 +209,48 @@ export function Builder() {
                 />
               </div>
               <div>
-                <div className='flex h-10 mt-5 '>
+                <div className='flex'>
                   <br />
                   {(loading || !templateSet) && <Loader />}
                   {!(loading || !templateSet) && <div className='flex'>
-                    <textarea  value={userPrompt} onChange={(e) => {
-                      setPrompt(e.target.value);
-                    }} className='p-2 w-full rounded-s-lg'></textarea>
-                    <button  onClick={async () => {
-                      const newMessage = {
-                        role: "user" as "user",
-                        content: userPrompt
-                      };
+                    <textarea value={userPrompt} onChange={(e) => {
+                    setPrompt(e.target.value)
+                  }} className='p-2 w-full'></textarea>
+                  <button onClick={async () => {
+                    const newMessage = {
+                      role: "user" as "user",
+                      content: userPrompt
+                    };
 
-                      setLoading(true);
-                      const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
-                        messages: [...llmMessages, newMessage]
-                      });
-                      setLoading(false);
+                    setLoading(true);
+                    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+                      messages: [...llmMessages, newMessage]
+                    });
+                    setLoading(false);
 
-                      setLlmMessages(x => [...x, newMessage]);
-                      setLlmMessages(x => [...x, {
-                        role: "assistant",
-                        content: stepsResponse.data.response
-                      }]);
-                      
-                      setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
-                        ...x,
-                        status: "pending" as "pending"
-                      }))]);
+                    setLlmMessages(x => [...x, newMessage]);
+                    setLlmMessages(x => [...x, {
+                      role: "assistant",
+                      content: stepsResponse.data.response
+                    }]);
+                    
+                    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
+                      ...x,
+                      status: "pending" as "pending"
+                    }))]);
 
-                    }} className='bg-emerald-200 h-10 px-4 rounded-e-lg'>Send</button>
+                  }} className='bg-purple-400 px-4'>Send</button>
                   </div>}
                 </div>
               </div>
             </div>
           </div>
-          <div className="col-span-1 max-h-[75vh]  scroll-smooth overflow-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 ">
-            <FileExplorer 
-              files={files} 
-              onFileSelect={setSelectedFile}
-            />
-          </div>
+          <div className="col-span-1">
+              <FileExplorer 
+                files={files} 
+                onFileSelect={setSelectedFile}
+              />
+            </div>
           <div className="col-span-2 bg-gray-900 rounded-lg shadow-lg p-4 h-[calc(100vh-8rem)]">
             <TabView activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="h-[calc(100%-4rem)]">
